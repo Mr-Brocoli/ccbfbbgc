@@ -52,6 +52,7 @@ namespace CrowdControl.Games.Packs
             {
                 List<Effect> effects = new List<Effect>
                 {
+                     new Effect("Die", "die"){Price=50},
                     new Effect("OHKO", "ohko"){Price=25, Duration=10},
 
                 };
@@ -131,11 +132,11 @@ namespace CrowdControl.Games.Packs
             string[] codeParams = request.EffectID.Split('_');
             switch (codeParams[0])
             {
-                case "notbeohko":
+                case "die":
                     TryEffect(request,
                        () =>
                        {
-                           return true;
+                           return Connector.Write32(Player.health, 0);
                        });
                     break;
                 case "ohko":
@@ -158,7 +159,7 @@ namespace CrowdControl.Games.Packs
             switch (codeParams[0])
             {
                 case "ohko":
-                    return true;
+                    return Connector.Write32(Player.health, Player.oldHealth);
                 default:
                     return true;
 

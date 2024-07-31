@@ -34,6 +34,11 @@ namespace CrowdControl.Games.Packs
 
         }
 
+
+        private const uint TOC = 0x803d4980;
+
+        private const uint isForceCruiseBubble = TOC - 0x3f00;
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -54,6 +59,7 @@ namespace CrowdControl.Games.Packs
                 {
                      new Effect("Die", "die"){Price=50},
                     new Effect("OHKO", "ohko"){Price=25, Duration=10},
+                    new Effect("Ender Bubble", "enderbubble"){Price = 10}
 
                 };
                 return effects;
@@ -132,6 +138,13 @@ namespace CrowdControl.Games.Packs
             string[] codeParams = request.EffectID.Split('_');
             switch (codeParams[0])
             {
+                case "enderbubble":
+                    TryEffect(request,
+                       () =>
+                       {
+                           return Connector.Read32(isForceCruiseBubble, out uint isForceCruiseBubbleReal) && isForceCruiseBubbleReal==0 && Connector.Write32(isForceCruiseBubble, 1);
+                       });
+                    break;
                 case "die":
                     TryEffect(request,
                        () =>

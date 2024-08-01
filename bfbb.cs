@@ -42,6 +42,8 @@ namespace CrowdControl.Games.Packs
 
         private const uint isForceCruiseBubble = TOC - 0x3f00;
 
+        private const uint playerSpeed = TOC - 0x3EFC;
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -63,7 +65,9 @@ namespace CrowdControl.Games.Packs
                      new Effect("Die", "die"){Price=50},
                     new Effect("OHKO", "ohko"){Price=25, Duration=10},
                     new Effect("Ender Bubble", "enderbubble"){Price = 10},
-                    new Effect("Slippery Movement", "icefloor"){Price = 10, Duration=15}
+                    new Effect("Slippery Movement", "icefloor"){Price = 10, Duration=15},
+                    new Effect("FAST PLAYER!!!", "playerspeed_200"){Price = 10, Duration=10},
+                    new Effect("Slow Player", "playerspeed_50"){Price = 10, Duration=10},
 
                 };
                 return effects;
@@ -173,6 +177,14 @@ namespace CrowdControl.Games.Packs
                            return Connector.WriteFloat(Player.slipTimer, 9999.0f) && Connector.WriteFloat(Player.slipAmount, 1000.0f);
                        }, "icefloor");
                     break;
+                case "playerspeed":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.WriteFloat(playerSpeed, float.Parse(codeParams[1]) / 100.0f);
+                       }, "playerspeed");
+                    break;
 
 
             }
@@ -187,6 +199,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.Write32(Player.health, Player.oldHealth);
                 case "icefloor":
                     return Connector.WriteFloat(Player.slipTimer, 0.0f);
+                case "playerspeed":
+                    return Connector.WriteFloat(playerSpeed, 1.0f);
                 default:
                     return true;
 

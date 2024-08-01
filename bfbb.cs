@@ -59,6 +59,10 @@ namespace CrowdControl.Games.Packs
 
         private const uint honestlyIDK = TOC - 0x6864;
 
+        private const uint invertedMovement = TOC - 0x6860;
+
+        private const uint invertedMovementReal = TOC - 0x3ef4;
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -87,6 +91,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("The Fog is Coming", "fog"){Price = 10, Duration=20},
                     new Effect("Bowling Time", "bowlingball"){Price = 10, Duration=10},
                     new Effect("Use your DPAD", "useyourdpad"){Price = 10, Duration=10},
+                    new Effect("Inverted Movement", "invertedmovement"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -242,6 +247,14 @@ namespace CrowdControl.Games.Packs
                            return Connector.WriteFloat(honestlyIDK, 30.0f);
                        }, "useyourdpad");
                     break;
+                case "invertedmovement":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.WriteFloat(invertedMovementReal, 1);
+                       }, "invertedmovement");
+                    break;
 
 
             }
@@ -266,6 +279,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.Write32(isBowlingBallForced, 0) && Connector.Write32(isStopBowlingBall, 1);
                 case "useyourdpad":
                     return Connector.WriteFloat(honestlyIDK, -40.0f);
+                case "invertedmovement":
+                    return Connector.WriteFloat(invertedMovementReal, 0);
                 default:
                     return true;
 

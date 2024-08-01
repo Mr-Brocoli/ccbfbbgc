@@ -92,6 +92,8 @@ namespace CrowdControl.Games.Packs
                     new Effect("Bowling Time", "bowlingball"){Price = 10, Duration=10},
                     new Effect("Use your DPAD", "useyourdpad"){Price = 10, Duration=10},
                     new Effect("Inverted Movement", "invertedmovement"){Price = 10, Duration=10},
+                    new Effect("Big Player", "playerscale_200"){Price = 10, Duration=10},
+                    new Effect("small player", "playerscale_50"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -255,6 +257,25 @@ namespace CrowdControl.Games.Packs
                            return Connector.WriteFloat(invertedMovementReal, 1);
                        }, "invertedmovement");
                     break;
+                case "playerscale":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           float scale = float.Parse(codeParams[1]) / 100.0f;
+
+                           if (!Connector.Read32(0x803c0c38 + 0x24, out uint model))
+                               return false;
+
+                           do
+                           {
+                               if (!Connector.WriteFloat(model + 0x50, scale) || !Connector.WriteFloat(model + 0x54, scale) || !Connector.WriteFloat(model + 0x58, scale))
+                                   return false;
+                           } while (Connector.Read32(model, out model) && model!=0);
+                           return true;
+
+                       }, "playerscale");
+                    break;
 
 
             }
@@ -281,6 +302,16 @@ namespace CrowdControl.Games.Packs
                     return Connector.WriteFloat(honestlyIDK, -40.0f);
                 case "invertedmovement":
                     return Connector.WriteFloat(invertedMovementReal, 0);
+                case "playerscale":
+                    if (!Connector.Read32(0x803c0c38 + 0x24, out uint model))
+                        return false;
+
+                    do
+                    {
+                        if (!Connector.WriteFloat(model + 0x50, 1.0f) || !Connector.WriteFloat(model + 0x54, 1.0f) || !Connector.WriteFloat(model + 0x58, 1.0f))
+                            return false;
+                    } while (Connector.Read32(model, out model) && model!=0);
+                    return true;
                 default:
                     return true;
 

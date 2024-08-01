@@ -32,6 +32,9 @@ namespace CrowdControl.Games.Packs
 
             public static uint oldHealth;
 
+            public static uint slipTimer = baseAddr + 0x1748;
+            public static uint slipAmount = baseAddr + 0x174c;
+
         }
 
 
@@ -59,7 +62,8 @@ namespace CrowdControl.Games.Packs
                 {
                      new Effect("Die", "die"){Price=50},
                     new Effect("OHKO", "ohko"){Price=25, Duration=10},
-                    new Effect("Ender Bubble", "enderbubble"){Price = 10}
+                    new Effect("Ender Bubble", "enderbubble"){Price = 10},
+                    new Effect("Slippery Movement", "icefloor"){Price = 10, Duration=15}
 
                 };
                 return effects;
@@ -161,7 +165,15 @@ namespace CrowdControl.Games.Packs
                            return Connector.Read32(Player.health, out Player.oldHealth) && Connector.Write32(Player.health, 1);
                        }, "ohko");
                     break;
-               
+                case "icefloor":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.WriteFloat(Player.slipTimer, 9999.0f) && Connector.WriteFloat(Player.slipAmount, 1000.0f);
+                       }, "icefloor");
+                    break;
+
 
             }
         }
@@ -173,6 +185,8 @@ namespace CrowdControl.Games.Packs
             {
                 case "ohko":
                     return Connector.Write32(Player.health, Player.oldHealth);
+                case "icefloor":
+                    return Connector.WriteFloat(Player.slipTimer, 0.0f);
                 default:
                     return true;
 

@@ -1,4 +1,5 @@
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -41,6 +42,9 @@ namespace CrowdControl.Games.Packs
             public static uint jumpHeightPatrick = baseAddr + 0xE50;
             public static uint jumpHeightSandy = baseAddr + 0x1298;
 
+            public static uint fogStrength = baseAddr + 0x664;
+            public static float initialFogStrength;
+
         }
 
 
@@ -75,6 +79,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("FAST PLAYER!!!", "playerspeed_200"){Price = 10, Duration=10},
                     new Effect("Slow Player", "playerspeed_50"){Price = 10, Duration=10},
                     new Effect("Super Jump", "jumppower_100"){Price = 10, Duration=10},
+                    new Effect("The Fog is Coming", "fog"){Price = 10, Duration=20},
                 };
                 return effects;
             }
@@ -201,6 +206,19 @@ namespace CrowdControl.Games.Packs
                            return Connector.WriteFloat(Player.jumpHeightSpongeBob, h) && Connector.WriteFloat(Player.jumpHeightPatrick, h) && Connector.WriteFloat(Player.jumpHeightSandy, h);
                        }, "jumppower");
                     break;
+                case "fog":
+                    RepeatAction(request, TimeSpan.FromSeconds(20),
+                       () => Connector.ReadFloat(Player.fogStrength, out Player.initialFogStrength),
+                       () => true,
+                       TimeSpan.FromSeconds(0.1),
+                       () => true,
+                       TimeSpan.FromSeconds(0.1),
+                       () =>
+                       {
+                           return Connector.ReadFloat(Player.fogStrength, out float x) && Connector.WriteFloat(Player.fogStrength, x > 20.0f ? x - Player.initialFogStrength / 150.0f : 10.0f);
+
+                       }, TimeSpan.FromSeconds(0.1), true, "fog");
+                    return;
 
 
             }
@@ -219,6 +237,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.WriteFloat(playerSpeed, 1.0f);
                 case "jumppower":
                     return Connector.WriteFloat(Player.jumpHeightSpongeBob, 5.0f) && Connector.WriteFloat(Player.jumpHeightPatrick, 5.0f) && Connector.WriteFloat(Player.jumpHeightSandy, 5.0f);
+                case "fog":
+                    return Connector.WriteFloat(Player.fogStrength, Player.initialFogStrength);
                 default:
                     return true;
 

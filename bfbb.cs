@@ -54,6 +54,9 @@ namespace CrowdControl.Games.Packs
 
         private const uint playerSpeed = TOC - 0x3EFC;
 
+        private const uint isBowlingBallForced = TOC - 0x3EF8;
+        private const uint isStopBowlingBall = 0x803d2900 - 0x72D0;
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -80,6 +83,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("Slow Player", "playerspeed_50"){Price = 10, Duration=10},
                     new Effect("Super Jump", "jumppower_100"){Price = 10, Duration=10},
                     new Effect("The Fog is Coming", "fog"){Price = 10, Duration=20},
+                     new Effect("Bowling Time", "bowlingball"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -204,7 +208,7 @@ namespace CrowdControl.Games.Packs
                            //Negative because it's actually a downwards velocity added to your initial jump height, so we want to add negative falling velocity
                            float h = -float.Parse(codeParams[1]);
                            return Connector.WriteFloat(Player.jumpHeightSpongeBob, h) && Connector.WriteFloat(Player.jumpHeightPatrick, h) && Connector.WriteFloat(Player.jumpHeightSandy, h);
-                       }, "jumppower");
+                       }, "jumpingorbowling");
                     break;
                 case "fog":
                     RepeatAction(request, TimeSpan.FromSeconds(20),
@@ -219,6 +223,14 @@ namespace CrowdControl.Games.Packs
 
                        }, TimeSpan.FromSeconds(0.1), true, "fog");
                     return;
+                case "bowlingball":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.Write32(isBowlingBallForced, 1);
+                       }, "jumpingorbowling");
+                    break;
 
 
             }
@@ -239,6 +251,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.WriteFloat(Player.jumpHeightSpongeBob, 5.0f) && Connector.WriteFloat(Player.jumpHeightPatrick, 5.0f) && Connector.WriteFloat(Player.jumpHeightSandy, 5.0f);
                 case "fog":
                     return Connector.WriteFloat(Player.fogStrength, Player.initialFogStrength);
+                case "bowlingball":
+                    return Connector.Write32(isBowlingBallForced, 0) && Connector.Write32(isStopBowlingBall, 1);
                 default:
                     return true;
 

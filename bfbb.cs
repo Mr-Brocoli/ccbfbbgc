@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+
 //using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using CrowdControl.Common;
 //using CrowdControl.Games.SpecialConnectors;
@@ -34,6 +36,10 @@ namespace CrowdControl.Games.Packs
 
             public static uint slipTimer = baseAddr + 0x1748;
             public static uint slipAmount = baseAddr + 0x174c;
+
+            public static uint jumpHeightSpongeBob = baseAddr + 0xA08;
+            public static uint jumpHeightPatrick = baseAddr + 0xE50;
+            public static uint jumpHeightSandy = baseAddr + 0x1298;
 
         }
 
@@ -68,7 +74,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("Slippery Movement", "icefloor"){Price = 10, Duration=15},
                     new Effect("FAST PLAYER!!!", "playerspeed_200"){Price = 10, Duration=10},
                     new Effect("Slow Player", "playerspeed_50"){Price = 10, Duration=10},
-
+                    new Effect("Super Jump", "jumppower_100"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -185,6 +191,16 @@ namespace CrowdControl.Games.Packs
                            return Connector.WriteFloat(playerSpeed, float.Parse(codeParams[1]) / 100.0f);
                        }, "playerspeed");
                     break;
+                case "jumppower":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           //Negative because it's actually a downwards velocity added to your initial jump height, so we want to add negative falling velocity
+                           float h = -float.Parse(codeParams[1]);
+                           return Connector.WriteFloat(Player.jumpHeightSpongeBob, h) && Connector.WriteFloat(Player.jumpHeightPatrick, h) && Connector.WriteFloat(Player.jumpHeightSandy, h);
+                       }, "jumppower");
+                    break;
 
 
             }
@@ -201,6 +217,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.WriteFloat(Player.slipTimer, 0.0f);
                 case "playerspeed":
                     return Connector.WriteFloat(playerSpeed, 1.0f);
+                case "jumppower":
+                    return Connector.WriteFloat(Player.jumpHeightSpongeBob, 5.0f) && Connector.WriteFloat(Player.jumpHeightPatrick, 5.0f) && Connector.WriteFloat(Player.jumpHeightSandy, 5.0f);
                 default:
                     return true;
 

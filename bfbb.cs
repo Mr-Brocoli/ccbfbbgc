@@ -57,6 +57,8 @@ namespace CrowdControl.Games.Packs
         private const uint isBowlingBallForced = TOC - 0x3EF8;
         private const uint isStopBowlingBall = 0x803d2900 - 0x72D0;
 
+        private const uint honestlyIDK = TOC - 0x6864;
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -83,7 +85,8 @@ namespace CrowdControl.Games.Packs
                     new Effect("Slow Player", "playerspeed_50"){Price = 10, Duration=10},
                     new Effect("Super Jump", "jumppower_100"){Price = 10, Duration=10},
                     new Effect("The Fog is Coming", "fog"){Price = 10, Duration=20},
-                     new Effect("Bowling Time", "bowlingball"){Price = 10, Duration=10},
+                    new Effect("Bowling Time", "bowlingball"){Price = 10, Duration=10},
+                    new Effect("Use your DPAD", "useyourdpad"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -231,6 +234,14 @@ namespace CrowdControl.Games.Packs
                            return Connector.Write32(isBowlingBallForced, 1);
                        }, "jumpingorbowling");
                     break;
+                case "useyourdpad":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.WriteFloat(honestlyIDK, 30.0f);
+                       }, "useyourdpad");
+                    break;
 
 
             }
@@ -253,6 +264,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.WriteFloat(Player.fogStrength, Player.initialFogStrength);
                 case "bowlingball":
                     return Connector.Write32(isBowlingBallForced, 0) && Connector.Write32(isStopBowlingBall, 1);
+                case "useyourdpad":
+                    return Connector.WriteFloat(honestlyIDK, -40.0f);
                 default:
                     return true;
 

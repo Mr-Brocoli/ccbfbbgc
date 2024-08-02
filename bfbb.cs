@@ -67,6 +67,10 @@ namespace CrowdControl.Games.Packs
 
         private const uint isUpsideDown = TOC - 0x3eec;
 
+        private const uint isInvincibubbly = TOC - 0x3ee8;
+
+        //disable for constant bubbles 800757cc
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -100,6 +104,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("small player", "playerscale_50"){Price = 10, Duration=10},
                     new Effect("Mirror Mode", "mirrormode"){Price = 10, Duration=20},
                     new Effect("Upside Down", "upsidedown"){Price = 10, Duration=10},
+                    new Effect("Invincibubbly", "invincibubbly"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -300,6 +305,15 @@ namespace CrowdControl.Games.Packs
 
                        }, "upsidedown");
                     break;
+                case "invincibubbly":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.Write32(isInvincibubbly, 1);
+
+                       }, "invincibubbly");
+                    break;
 
 
             }
@@ -340,6 +354,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.Write32(isMirrorMode, 0);
                 case "upsidedown":
                     return Connector.Write32(isUpsideDown, 0);
+                case "invincibubbly":
+                    return Connector.Write32(isInvincibubbly, 0);
                 default:
                     return true;
 

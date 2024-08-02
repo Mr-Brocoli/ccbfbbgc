@@ -65,6 +65,8 @@ namespace CrowdControl.Games.Packs
 
         private const uint isMirrorMode = TOC - 0x3ef0;
 
+        private const uint isUpsideDown = TOC - 0x3eec;
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };
@@ -97,6 +99,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("Big Player", "playerscale_200"){Price = 10, Duration=10},
                     new Effect("small player", "playerscale_50"){Price = 10, Duration=10},
                     new Effect("Mirror Mode", "mirrormode"){Price = 10, Duration=20},
+                    new Effect("Upside Down", "upsidedown"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -288,6 +291,15 @@ namespace CrowdControl.Games.Packs
 
                        }, "mirrormode");
                     break;
+                case "upsidedown":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.Write32(isUpsideDown, 1);
+
+                       }, "upsidedown");
+                    break;
 
 
             }
@@ -326,6 +338,8 @@ namespace CrowdControl.Games.Packs
                     return true;
                 case "mirrormode":
                     return Connector.Write32(isMirrorMode, 0);
+                case "upsidedown":
+                    return Connector.Write32(isUpsideDown, 0);
                 default:
                     return true;
 

@@ -17,6 +17,10 @@ using JetBrains.Annotations;
 using System.Runtime.InteropServices;
 using System.Globalization;
 
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using ConnectorLib.Inject.Emulator;
+
 
 
 namespace CrowdControl.Games.Packs.BFBB
@@ -87,9 +91,10 @@ namespace CrowdControl.Games.Packs.BFBB
 
         //-0x7480 is like the movement speed of shinies maybe?
 
-        private const uint sendGeckoToBase = 0;
+        private const uint sendGeckoToBase = TOC - 0x3ee0;
         private static uint sendGeckoTo = sendGeckoToBase;
-        private uint[] generalcode = { 0 };
+        private uint[] generalcode = { 0x04071108, 0x60000000, 0x04057df4, 0x8062c100, 0xc205dc8c, 0x00000006, 0x38840050, 0x8002c100, 0x2c000000, 0x4182001c, 0xe0040000, 0xc0240008, 0xf0050000, 0xd0250008, 0x38000000, 0x9002c100, 0x60000000, 0x00000000, 0xc206ff00, 0x00000004, 0x8002c104, 0x2c000000, 0x4082000c, 0x3c003f80, 0x9002c104, 0xc3e2c104, 0xefff0072, 0x00000000, 0xc20745b4, 0x00000004, 0x8002c108, 0x2c000000, 0x4d820020, 0x3c008006, 0x6000a92c, 0x7c0903a6, 0x4e800420, 0x00000000, 0xc2075fa0, 0x00000004, 0x8082c10c, 0x2c040000, 0x4182000c, 0x7d0800d0, 0x7ce700d0, 0x3c804330, 0x60000000, 0x00000000, 0xC21CC438, 0x00000005, 0x8002C110, 0x2C000000, 0x41820014, 0x3C00801C, 0x6000C45C, 0x7C0903A6, 0x4E800420, 0x2C030002, 0x60000000, 0x00000000, 0xC2245D44, 0x00000004, 0x8002C110, 0x2C000000, 0x4182000c, 0xC0230044, 0xEC000072, 0xD0030004, 0x60000000, 0x00000000, 0xC2097E98, 0x00000006, 0x8002C110, 0x2C000000, 0x41820020, 0x3CA08039, 0x88C5C9CC, 0x7CC600D0, 0x98C5C9CC, 0x88C5C9CE, 0x7CC600D0, 0x98C5C9CE, 0xC02D8EB8, 0x00000000, 0xC20B4720, 0x00000004, 0x8062C110, 0x2C030000, 0x41820010, 0x3C60802C, 0x3C803F80, 0x908381A0, 0x38600013, 0x00000000, 0xC2036474, 0x00000004, 0x8002C110, 0x2C000000, 0x4D820020, 0x3CE0802C, 0x3C00BF80, 0x900781A0, 0x4E800020, 0x00000000, 0xC2245D48, 0x00000007, 0x80FF0070, 0x811F0074, 0x64E78000, 0x65088000, 0x8002C114, 0x2C000000, 0x4082000C, 0x6CE78000, 0x6D088000, 0x90FF0070, 0x911F0074, 0xC01F0074, 0x60000000, 0x00000000, 0xC2076430, 0x00000003, 0x8002C118, 0x2C000000, 0x4C820020, 0x9421FFE0, 0x60000000, 0x00000000, 0xC20757C4, 0x00000002, 0x8002C118, 0x807E1AE4, 0x7C001B78, 0x00000000, 0xc21cdef4, 0x00000003, 0x8002c11c, 0x2c000000, 0x4c820020, 0x7c0802a6, 0x60000000, 0x00000000, };
+
 
 
 
@@ -167,6 +172,13 @@ namespace CrowdControl.Games.Packs.BFBB
 
         private bool geckoFlush(uint[] g)
         {
+
+            if (!Connector.Read32(sendGeckoToBase, out uint isZeroCheck))
+                return false;
+            // we flushed the gecko
+            if (isZeroCheck != 0)
+                return true;
+
             sendGeckoTo = sendGeckoToBase;
             for (uint i = 0; i != g.Length; i += 2)
             {
@@ -199,8 +211,8 @@ namespace CrowdControl.Games.Packs.BFBB
                     i -= 2;
                 }
             }
+            (Connector as DolphinConnector)?.UncacheJIT();
             return true;
-            //(Connector as DolphinConnector)?.UncacheJIT();
         }
 
         //Try Effect Simple
@@ -208,15 +220,13 @@ namespace CrowdControl.Games.Packs.BFBB
             TryEffect(request, () => true, action);
 
         protected override void StartEffect(EffectRequest request)
-        {
+        { 
 
-            //init();
-
-            //if (!IsReady(request))
-            //{
-            //    DelayEffect(request, TimeSpan.FromSeconds(5));
-            //    return;
-            //}
+            if (!geckoFlush(generalcode))
+            {
+                DelayEffect(request, TimeSpan.FromSeconds(1));
+                return;
+            }
 
             Connector.SendMessage(request.EffectID);
             string[] codeParams = request.EffectID.Split('_');

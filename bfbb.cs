@@ -71,6 +71,8 @@ namespace CrowdControl.Games.Packs
 
         //disable for constant bubbles 800757cc
 
+        //-0x7480 is like the movement speed of shinies maybe?
+
         private const uint sendGeckoToBase = 0;
         private static uint sendGeckoTo = sendGeckoToBase;
         private uint[] generalcode = { 0 };

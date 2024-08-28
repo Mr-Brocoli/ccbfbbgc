@@ -69,6 +69,8 @@ namespace CrowdControl.Games.Packs
 
         private const uint isInvincibubbly = TOC - 0x3ee8;
 
+        private const uint isTextureConstant = TOC - 0x3ee4;
+
         //disable for constant bubbles 800757cc
 
         //-0x7480 is like the movement speed of shinies maybe?
@@ -107,6 +109,7 @@ namespace CrowdControl.Games.Packs
                     new Effect("Mirror Mode", "mirrormode"){Price = 10, Duration=20},
                     new Effect("Upside Down", "upsidedown"){Price = 10, Duration=10},
                     new Effect("Invincibubbly", "invincibubbly"){Price = 10, Duration=10},
+                     new Effect("Texture Constant Funny", "textureconstant"){Price = 10, Duration=10},
                 };
                 return effects;
             }
@@ -130,6 +133,10 @@ namespace CrowdControl.Games.Packs
             }
             return addr;
         }
+
+        /*c2123456 00000002
+           388000c8 80ad2f80
+            90850120 00000000*/
 
         private void geckoFlush(uint[] g)
         {
@@ -316,6 +323,15 @@ namespace CrowdControl.Games.Packs
 
                        }, "invincibubbly");
                     break;
+                case "textureconstant":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.Write32(isTextureConstant, 1);
+
+                       }, "textureconstant");
+                    break;
 
 
             }
@@ -360,6 +376,8 @@ namespace CrowdControl.Games.Packs
                     return Connector.Write32(isUpsideDown, 0);
                 case "invincibubbly":
                     return Connector.Write32(isInvincibubbly, 0);
+                case "textureconstant":
+                    return Connector.Write32(isTextureConstant, 0);
                 default:
                     return true;
 

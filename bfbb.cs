@@ -92,7 +92,7 @@ namespace CrowdControl.Games.Packs
                 List<Effect> effects = new List<Effect>
                 {
                      new Effect("Die", "die"){Price=50},
-                    new Effect("OHKO", "ohko"){Price=25, Duration=10},
+                    new Effect("OHKO", "ohko"){Price=25, Duration=20},
                     new Effect("Ender Bubble", "enderbubble"){Price = 10},
                     new Effect("Slippery Movement", "icefloor"){Price = 10, Duration=15},
                     new Effect("FAST PLAYER!!!", "playerspeed_200"){Price = 10, Duration=10},
@@ -321,13 +321,15 @@ namespace CrowdControl.Games.Packs
             }
         }
 
+
         protected override bool StopEffect(EffectRequest request)
         {
             string[] codeParams = request.EffectID.Split('_');
             switch (codeParams[0])
             {
                 case "ohko":
-                    return Connector.Write32(Player.health, Player.oldHealth);
+                    
+                    return Connector.Read32(Player.health, out uint healthCheck) && healthCheck > Player.oldHealth ? true : Connector.Write32(Player.health, Player.oldHealth);
                 case "icefloor":
                     return Connector.WriteFloat(Player.slipTimer, 0.0f);
                 case "playerspeed":

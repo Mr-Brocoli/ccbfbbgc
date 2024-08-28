@@ -39,6 +39,7 @@ namespace CrowdControl.Games.Packs
             public const uint baseAddr = 0x803c0558;
 
             public const uint health = baseAddr + 0x16b0;
+            public const uint maxHealth = baseAddr + 0x1738;
 
             public static uint oldHealth;
 
@@ -121,6 +122,8 @@ namespace CrowdControl.Games.Packs
                     new Effect("Texture Constant Funny", "textureconstant"){Price = 10, Duration=10},
                     new Effect("Give Shinies", "giveshinies"){Quantity=99999, Price = 10},
                     new Effect("Take Shinies", "takeshinies"){Quantity=99999, Price = 10},
+                    new Effect("Increase Max HP", "givemaxhp"){Price = 100},
+                    new Effect("Decrease Max HP", "takemaxhp"){Price=100},
                 };
                 return effects;
             }
@@ -218,6 +221,15 @@ namespace CrowdControl.Games.Packs
                            return Connector.RangeAdd32(Player.shinyCount, (codeParams[0] == "takeshinies" ? -1 : 1) * request.Quantity, 0, 99999, false);
                        });
                     break;
+                case "takemaxhp":
+                case "givemaxhp":
+                    TryEffect(request,
+                       () =>
+                       {
+                           return Connector.RangeAdd32(Player.maxHealth, (codeParams[0] == "takemaxhp" ? -1 : 1), 0, 6, false)
+                           && Connector.Read32(Player.maxHealth, out uint maxHealth) && Connector.Write32(Player.health, maxHealth);
+                       });
+                    break;
                 case "die":
                     TryEffect(request,
                        () =>
@@ -231,7 +243,8 @@ namespace CrowdControl.Games.Packs
                        () =>
                        {
 
-                           return Connector.Read32(Player.health, out Player.oldHealth) && Connector.Write32(Player.health, 1);
+                           return Connector.Read32(Player.maxHealth, out uint maxHealth) && maxHealth > 1 &&
+                                  Connector.Read32(Player.health, out Player.oldHealth) && Player.oldHealth > 1 && Connector.Write32(Player.health, 1);
                        }, "ohko");
                     break;
                 case "icefloor":

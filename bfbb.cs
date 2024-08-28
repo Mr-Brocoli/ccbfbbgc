@@ -19,7 +19,7 @@ using System.Globalization;
 
 
 
-namespace CrowdControl.Games.Packs
+namespace CrowdControl.Games.Packs.BFBB
 {
     [UsedImplicitly]
     [SuppressMessage("ReSharper", "CommentTypo")]
@@ -54,6 +54,8 @@ namespace CrowdControl.Games.Packs
             public static float initialFogStrength;
 
             public static uint shinyCount = baseAddr + 0x1B00;
+
+            public static uint isInControlFlags = baseAddr + 0x1788;
 
         }
 
@@ -129,31 +131,41 @@ namespace CrowdControl.Games.Packs
             }
         }
 
+        public override ROMTable ROMTable => new[]
+{
+        new ROMInfo("BFBB (NTSC-U) (GMSE01)", null, Patching.Ignore, ROMStatus.ValidPatched,
+            s => Patching.MD5(s, "0c6d2edae9fdf40dfc410ff1623e4119"))
+        };
 
-        public override Game Game { get; } = new(165, "BFBB", "BFBB", "GCN",
-            ConnectorType.GCNConnector);
 
-        protected override bool IsReady(EffectRequest request)
+
+        public override Game Game { get; } = new("BFBB", "BFBB", "GCN", ConnectorType.GCNConnector);
+
+        //protected override bool IsReady(EffectRequest request)
+        //{
+        //    return true;
+        //}
+
+        protected override GameState GetGameState()
         {
-            return true;
+
+            if(!Connector.Read32(0x803d2900 - 0x7058, out uint basicPauseCheck))
+                return GameState.Unknown;
+
+            if (basicPauseCheck >= 6 && basicPauseCheck <= 8)
+                return GameState.Paused;
+
+            if (!Connector.Read32(Player.isInControlFlags, out uint isInControl))
+                return GameState.Unknown;
+
+            if (isInControl != 0)
+                return GameState.Paused;
+
+            return GameState.Ready;
         }
 
-        private uint getAddressInner(params uint[] args)
-        {
-            uint addr = 0;
-            foreach (uint t in args)
-            {
-                Connector.Read32(addr + t, out addr);
-                if (addr == 0) return 0;
-            }
-            return addr;
-        }
 
-        /*c2123456 00000002
-           388000c8 80ad2f80
-            90850120 00000000*/
-
-        private void geckoFlush(uint[] g)
+        private bool geckoFlush(uint[] g)
         {
             sendGeckoTo = sendGeckoToBase;
             for (uint i = 0; i != g.Length; i += 2)
@@ -161,29 +173,33 @@ namespace CrowdControl.Games.Packs
                 uint addr = g[i] & 0xffffff | 0x80000000;
                 if (g[i] >> 24 == 0x04)
                 {
-                    Connector.Write32(addr, g[i + 1]);
+                    if (!Connector.Write32(addr, g[i + 1])) 
+                        return false;
                 }
                 else if (g[i] >> 24 == 0xc2)
                 {
                     uint j = (g[i + 1] * 2) + i + 2;
                     i += 2;
                     long k = (sendGeckoTo - (long)(addr));
-                    Connector.Write32(addr, (uint)(0x48000000 | (k & 0x3ffffff)));
+                    if(!Connector.Write32(addr, (uint)(0x48000000 | (k & 0x3ffffff))))
+                        return false;
                     while (i != j)
                     {
-                        Connector.Write32(sendGeckoTo, g[i]);
+                        if(!Connector.Write32(sendGeckoTo, g[i]))
+                            return false;
                         i++;
                         sendGeckoTo += 4;
                     }
 
                     sendGeckoTo -= 4;
                     k = (addr + 4 - (long)(sendGeckoTo));
-                    Connector.Write32(sendGeckoTo, (uint)(0x48000000 | (k & 0x3ffffff)));
+                    if (!Connector.Write32(sendGeckoTo, (uint)(0x48000000 | (k & 0x3ffffff))))
+                        return false ;
                     sendGeckoTo += 4;
                     i -= 2;
                 }
             }
-
+            return true;
             //(Connector as DolphinConnector)?.UncacheJIT();
         }
 
@@ -194,13 +210,13 @@ namespace CrowdControl.Games.Packs
         protected override void StartEffect(EffectRequest request)
         {
 
-            init();
+            //init();
 
-            if (!IsReady(request))
-            {
-                DelayEffect(request, TimeSpan.FromSeconds(5));
-                return;
-            }
+            //if (!IsReady(request))
+            //{
+            //    DelayEffect(request, TimeSpan.FromSeconds(5));
+            //    return;
+            //}
 
             Connector.SendMessage(request.EffectID);
             string[] codeParams = request.EffectID.Split('_');
@@ -274,18 +290,16 @@ namespace CrowdControl.Games.Packs
                        }, "jumpingorbowling");
                     break;
                 case "fog":
-                    RepeatAction(request, TimeSpan.FromSeconds(20),
-                       () => Connector.ReadFloat(Player.fogStrength, out Player.initialFogStrength),
-                       () => true,
-                       TimeSpan.FromSeconds(0.1),
-                       () => true,
-                       TimeSpan.FromSeconds(0.1),
-                       () =>
-                       {
-                           return Connector.ReadFloat(Player.fogStrength, out float x) && Connector.WriteFloat(Player.fogStrength, x > 20.0f ? x - Player.initialFogStrength / 150.0f : 10.0f);
+                      RepeatAction(request,
+                            () => true,
+                            () => Connector.SendMessage($"{request.DisplayViewer} has casted the fog upon you."), TimeSpan.FromSeconds(1),
+                            () => true, TimeSpan.FromMilliseconds(100),
+                            () =>
+                            {
+                                return Connector.ReadFloat(Player.fogStrength, out float x) && Connector.WriteFloat(Player.fogStrength, x > 20.0f ? x - Player.initialFogStrength / 150.0f : 10.0f);
 
-                       }, TimeSpan.FromSeconds(0.1), true, "fog");
-                    return;
+                            }, TimeSpan.FromMilliseconds(100), false, "fog");
+                    break;
                 case "bowlingball":
                     StartTimed(request,
                        () => true,
@@ -366,8 +380,12 @@ namespace CrowdControl.Games.Packs
                        }, "textureconstant");
                     break;
 
-
             }
+
+
+            return;
+
+
         }
 
 
@@ -412,7 +430,7 @@ namespace CrowdControl.Games.Packs
                 case "textureconstant":
                     return Connector.Write32(isTextureConstant, 0);
                 default:
-                    return true;
+                    return base.StopEffect(request);
 
             }
         }

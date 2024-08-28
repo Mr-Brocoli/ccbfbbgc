@@ -12,6 +12,13 @@ using CrowdControl.Common;
 using JetBrains.Annotations;
 using ConnectorType = CrowdControl.Common.ConnectorType;
 
+using System.Threading.Tasks;
+using JetBrains.Annotations;
+using System.Runtime.InteropServices;
+using System.Globalization;
+
+
+
 namespace CrowdControl.Games.Packs
 {
     [UsedImplicitly]
@@ -44,6 +51,8 @@ namespace CrowdControl.Games.Packs
 
             public static uint fogStrength = baseAddr + 0x664;
             public static float initialFogStrength;
+
+            public static uint shinyCount = baseAddr + 0x1B00;
 
         }
 
@@ -109,11 +118,14 @@ namespace CrowdControl.Games.Packs
                     new Effect("Mirror Mode", "mirrormode"){Price = 10, Duration=20},
                     new Effect("Upside Down", "upsidedown"){Price = 10, Duration=10},
                     new Effect("Invincibubbly", "invincibubbly"){Price = 10, Duration=10},
-                     new Effect("Texture Constant Funny", "textureconstant"){Price = 10, Duration=10},
+                    new Effect("Texture Constant Funny", "textureconstant"){Price = 10, Duration=10},
+                    new Effect("Give Shinies", "giveshinies"){Quantity=99999, Price = 10},
+                    new Effect("Take Shinies", "takeshinies"){Quantity=99999, Price = 10},
                 };
                 return effects;
             }
         }
+
 
         public override Game Game { get; } = new(165, "BFBB", "BFBB", "GCN",
             ConnectorType.GCNConnector);
@@ -196,6 +208,14 @@ namespace CrowdControl.Games.Packs
                        () =>
                        {
                            return Connector.Read32(isForceCruiseBubble, out uint isForceCruiseBubbleReal) && isForceCruiseBubbleReal==0 && Connector.Write32(isForceCruiseBubble, 1);
+                       });
+                    break;
+                case "takeshinies":
+                case "giveshinies":
+                    TryEffect(request,
+                       () =>
+                       {
+                           return Connector.RangeAdd32(Player.shinyCount, (codeParams[0] == "takeshinies" ? -1 : 1) * request.Quantity, 0, 99999, false);
                        });
                     break;
                 case "die":

@@ -12,7 +12,18 @@ using CrowdControl.Common;
 using JetBrains.Annotations;
 using ConnectorType = CrowdControl.Common.ConnectorType;
 
-namespace CrowdControl.Games.Packs
+using System.Threading.Tasks;
+using JetBrains.Annotations;
+using System.Runtime.InteropServices;
+using System.Globalization;
+
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using ConnectorLib.Inject.Emulator;
+
+
+
+namespace CrowdControl.Games.Packs.BFBB
 {
     [UsedImplicitly]
     [SuppressMessage("ReSharper", "CommentTypo")]
@@ -32,6 +43,7 @@ namespace CrowdControl.Games.Packs
             public const uint baseAddr = 0x803c0558;
 
             public const uint health = baseAddr + 0x16b0;
+            public const uint maxHealth = baseAddr + 0x1738;
 
             public static uint oldHealth;
 
@@ -44,6 +56,10 @@ namespace CrowdControl.Games.Packs
 
             public static uint fogStrength = baseAddr + 0x664;
             public static float initialFogStrength;
+
+            public static uint shinyCount = baseAddr + 0x1B00;
+
+            public static uint isInControlFlags = baseAddr + 0x1788;
 
         }
 
@@ -69,13 +85,16 @@ namespace CrowdControl.Games.Packs
 
         private const uint isInvincibubbly = TOC - 0x3ee8;
 
+        private const uint isTextureConstant = TOC - 0x3ee4;
+
         //disable for constant bubbles 800757cc
 
         //-0x7480 is like the movement speed of shinies maybe?
 
-        private const uint sendGeckoToBase = 0;
+        private const uint sendGeckoToBase = TOC - 0x3ee0;
         private static uint sendGeckoTo = sendGeckoToBase;
-        private uint[] generalcode = { 0 };
+        private uint[] generalcode = { 0x04071108, 0x60000000, 0x04057df4, 0x8062c100, 0xc205dc8c, 0x00000006, 0x38840050, 0x8002c100, 0x2c000000, 0x4182001c, 0xe0040000, 0xc0240008, 0xf0050000, 0xd0250008, 0x38000000, 0x9002c100, 0x60000000, 0x00000000, 0xc206ff00, 0x00000004, 0x8002c104, 0x2c000000, 0x4082000c, 0x3c003f80, 0x9002c104, 0xc3e2c104, 0xefff0072, 0x00000000, 0xc20745b4, 0x00000004, 0x8002c108, 0x2c000000, 0x4d820020, 0x3c008006, 0x6000a92c, 0x7c0903a6, 0x4e800420, 0x00000000, 0xc2075fa0, 0x00000004, 0x8082c10c, 0x2c040000, 0x4182000c, 0x7d0800d0, 0x7ce700d0, 0x3c804330, 0x60000000, 0x00000000, 0xC21CC438, 0x00000005, 0x8002C110, 0x2C000000, 0x41820014, 0x3C00801C, 0x6000C45C, 0x7C0903A6, 0x4E800420, 0x2C030002, 0x60000000, 0x00000000, 0xC2245D44, 0x00000004, 0x8002C110, 0x2C000000, 0x4182000c, 0xC0230044, 0xEC000072, 0xD0030004, 0x60000000, 0x00000000, 0xC2097E98, 0x00000006, 0x8002C110, 0x2C000000, 0x41820020, 0x3CA08039, 0x88C5C9CC, 0x7CC600D0, 0x98C5C9CC, 0x88C5C9CE, 0x7CC600D0, 0x98C5C9CE, 0xC02D8EB8, 0x00000000, 0xC20B4720, 0x00000004, 0x8062C110, 0x2C030000, 0x41820010, 0x3C60802C, 0x3C803F80, 0x908381A0, 0x38600013, 0x00000000, 0xC2036474, 0x00000004, 0x8002C110, 0x2C000000, 0x4D820020, 0x3CE0802C, 0x3C00BF80, 0x900781A0, 0x4E800020, 0x00000000, 0xC2245D48, 0x00000007, 0x80FF0070, 0x811F0074, 0x64E78000, 0x65088000, 0x8002C114, 0x2C000000, 0x4082000C, 0x6CE78000, 0x6D088000, 0x90FF0070, 0x911F0074, 0xC01F0074, 0x60000000, 0x00000000, 0xC2076430, 0x00000003, 0x8002C118, 0x2C000000, 0x4C820020, 0x9421FFE0, 0x60000000, 0x00000000, 0xC20757C4, 0x00000002, 0x8002C118, 0x807E1AE4, 0x7C001B78, 0x00000000, 0xc21cdef4, 0x00000003, 0x8002c11c, 0x2c000000, 0x4c820020, 0x7c0802a6, 0x60000000, 0x00000000, };
+
 
 
 
@@ -92,7 +111,7 @@ namespace CrowdControl.Games.Packs
                 List<Effect> effects = new List<Effect>
                 {
                      new Effect("Die", "die"){Price=50},
-                    new Effect("OHKO", "ohko"){Price=25, Duration=10},
+                    new Effect("OHKO", "ohko"){Price=25, Duration=20},
                     new Effect("Ender Bubble", "enderbubble"){Price = 10},
                     new Effect("Slippery Movement", "icefloor"){Price = 10, Duration=15},
                     new Effect("FAST PLAYER!!!", "playerspeed_200"){Price = 10, Duration=10},
@@ -107,62 +126,93 @@ namespace CrowdControl.Games.Packs
                     new Effect("Mirror Mode", "mirrormode"){Price = 10, Duration=20},
                     new Effect("Upside Down", "upsidedown"){Price = 10, Duration=10},
                     new Effect("Invincibubbly", "invincibubbly"){Price = 10, Duration=10},
+                    new Effect("Texture Constant Funny", "textureconstant"){Price = 10, Duration=10},
+                    new Effect("Give Shinies", "giveshinies"){Quantity=99999, Price = 10},
+                    new Effect("Take Shinies", "takeshinies"){Quantity=99999, Price = 10},
+                    new Effect("Increase Max HP", "givemaxhp"){Price = 100},
+                    new Effect("Decrease Max HP", "takemaxhp"){Price=100},
                 };
                 return effects;
             }
         }
 
-        public override Game Game { get; } = new(165, "BFBB", "BFBB", "GCN",
-            ConnectorType.GCNConnector);
+        public override ROMTable ROMTable => new[]
+{
+        new ROMInfo("BFBB (NTSC-U) (GMSE01)", null, Patching.Ignore, ROMStatus.ValidPatched,
+            s => Patching.MD5(s, "0c6d2edae9fdf40dfc410ff1623e4119"))
+        };
 
-        protected override bool IsReady(EffectRequest request)
+
+
+        public override Game Game { get; } = new("BFBB", "BFBB", "GCN", ConnectorType.GCNConnector);
+
+        //protected override bool IsReady(EffectRequest request)
+        //{
+        //    return true;
+        //}
+
+        protected override GameState GetGameState()
         {
-            return true;
+
+            if(!Connector.Read32(0x803d2900 - 0x7058, out uint basicPauseCheck))
+                return GameState.Unknown;
+
+            if (basicPauseCheck >= 6 && basicPauseCheck <= 8)
+                return GameState.Paused;
+
+            if (!Connector.Read32(Player.isInControlFlags, out uint isInControl))
+                return GameState.Unknown;
+
+            if (isInControl != 0)
+                return GameState.Paused;
+
+            return GameState.Ready;
         }
 
-        private uint getAddressInner(params uint[] args)
-        {
-            uint addr = 0;
-            foreach (uint t in args)
-            {
-                Connector.Read32(addr + t, out addr);
-                if (addr == 0) return 0;
-            }
-            return addr;
-        }
 
-        private void geckoFlush(uint[] g)
+        private bool geckoFlush(uint[] g)
         {
+
+            if (!Connector.Read32(sendGeckoToBase, out uint isZeroCheck))
+                return false;
+            // we flushed the gecko
+            if (isZeroCheck != 0)
+                return true;
+
             sendGeckoTo = sendGeckoToBase;
             for (uint i = 0; i != g.Length; i += 2)
             {
                 uint addr = g[i] & 0xffffff | 0x80000000;
                 if (g[i] >> 24 == 0x04)
                 {
-                    Connector.Write32(addr, g[i + 1]);
+                    if (!Connector.Write32(addr, g[i + 1])) 
+                        return false;
                 }
                 else if (g[i] >> 24 == 0xc2)
                 {
                     uint j = (g[i + 1] * 2) + i + 2;
                     i += 2;
                     long k = (sendGeckoTo - (long)(addr));
-                    Connector.Write32(addr, (uint)(0x48000000 | (k & 0x3ffffff)));
+                    if(!Connector.Write32(addr, (uint)(0x48000000 | (k & 0x3ffffff))))
+                        return false;
                     while (i != j)
                     {
-                        Connector.Write32(sendGeckoTo, g[i]);
+                        if(!Connector.Write32(sendGeckoTo, g[i]))
+                            return false;
                         i++;
                         sendGeckoTo += 4;
                     }
 
                     sendGeckoTo -= 4;
                     k = (addr + 4 - (long)(sendGeckoTo));
-                    Connector.Write32(sendGeckoTo, (uint)(0x48000000 | (k & 0x3ffffff)));
+                    if (!Connector.Write32(sendGeckoTo, (uint)(0x48000000 | (k & 0x3ffffff))))
+                        return false ;
                     sendGeckoTo += 4;
                     i -= 2;
                 }
             }
-
-            //(Connector as DolphinConnector)?.UncacheJIT();
+            (Connector as DolphinConnector)?.UncacheJIT();
+            return true;
         }
 
         //Try Effect Simple
@@ -170,13 +220,11 @@ namespace CrowdControl.Games.Packs
             TryEffect(request, () => true, action);
 
         protected override void StartEffect(EffectRequest request)
-        {
+        { 
 
-            init();
-
-            if (!IsReady(request))
+            if (!geckoFlush(generalcode))
             {
-                DelayEffect(request, TimeSpan.FromSeconds(5));
+                DelayEffect(request, TimeSpan.FromSeconds(1));
                 return;
             }
 
@@ -189,6 +237,23 @@ namespace CrowdControl.Games.Packs
                        () =>
                        {
                            return Connector.Read32(isForceCruiseBubble, out uint isForceCruiseBubbleReal) && isForceCruiseBubbleReal==0 && Connector.Write32(isForceCruiseBubble, 1);
+                       });
+                    break;
+                case "takeshinies":
+                case "giveshinies":
+                    TryEffect(request,
+                       () =>
+                       {
+                           return Connector.RangeAdd32(Player.shinyCount, (codeParams[0] == "takeshinies" ? -1 : 1) * request.Quantity, 0, 99999, false);
+                       });
+                    break;
+                case "takemaxhp":
+                case "givemaxhp":
+                    TryEffect(request,
+                       () =>
+                       {
+                           return Connector.RangeAdd32(Player.maxHealth, (codeParams[0] == "takemaxhp" ? -1 : 1), 0, 6, false)
+                           && Connector.Read32(Player.maxHealth, out uint maxHealth) && Connector.Write32(Player.health, maxHealth);
                        });
                     break;
                 case "die":
@@ -204,7 +269,8 @@ namespace CrowdControl.Games.Packs
                        () =>
                        {
 
-                           return Connector.Read32(Player.health, out Player.oldHealth) && Connector.Write32(Player.health, 1);
+                           return Connector.Read32(Player.maxHealth, out uint maxHealth) && maxHealth > 1 &&
+                                  Connector.Read32(Player.health, out Player.oldHealth) && Player.oldHealth > 1 && Connector.Write32(Player.health, 1);
                        }, "ohko");
                     break;
                 case "icefloor":
@@ -234,18 +300,16 @@ namespace CrowdControl.Games.Packs
                        }, "jumpingorbowling");
                     break;
                 case "fog":
-                    RepeatAction(request, TimeSpan.FromSeconds(20),
-                       () => Connector.ReadFloat(Player.fogStrength, out Player.initialFogStrength),
-                       () => true,
-                       TimeSpan.FromSeconds(0.1),
-                       () => true,
-                       TimeSpan.FromSeconds(0.1),
-                       () =>
-                       {
-                           return Connector.ReadFloat(Player.fogStrength, out float x) && Connector.WriteFloat(Player.fogStrength, x > 20.0f ? x - Player.initialFogStrength / 150.0f : 10.0f);
+                      RepeatAction(request,
+                            () => true,
+                            () => Connector.SendMessage($"{request.DisplayViewer} has casted the fog upon you."), TimeSpan.FromSeconds(1),
+                            () => true, TimeSpan.FromMilliseconds(100),
+                            () =>
+                            {
+                                return Connector.ReadFloat(Player.fogStrength, out float x) && Connector.WriteFloat(Player.fogStrength, x > 20.0f ? x - Player.initialFogStrength / 150.0f : 10.0f);
 
-                       }, TimeSpan.FromSeconds(0.1), true, "fog");
-                    return;
+                            }, TimeSpan.FromMilliseconds(100), false, "fog");
+                    break;
                 case "bowlingball":
                     StartTimed(request,
                        () => true,
@@ -316,10 +380,24 @@ namespace CrowdControl.Games.Packs
 
                        }, "invincibubbly");
                     break;
+                case "textureconstant":
+                    StartTimed(request,
+                       () => true,
+                       () =>
+                       {
+                           return Connector.Write32(isTextureConstant, 1);
 
+                       }, "textureconstant");
+                    break;
 
             }
+
+
+            return;
+
+
         }
+
 
         protected override bool StopEffect(EffectRequest request)
         {
@@ -327,7 +405,8 @@ namespace CrowdControl.Games.Packs
             switch (codeParams[0])
             {
                 case "ohko":
-                    return Connector.Write32(Player.health, Player.oldHealth);
+                    
+                    return Connector.Read32(Player.health, out uint healthCheck) && healthCheck > Player.oldHealth ? true : Connector.Write32(Player.health, Player.oldHealth);
                 case "icefloor":
                     return Connector.WriteFloat(Player.slipTimer, 0.0f);
                 case "playerspeed":
@@ -358,8 +437,10 @@ namespace CrowdControl.Games.Packs
                     return Connector.Write32(isUpsideDown, 0);
                 case "invincibubbly":
                     return Connector.Write32(isInvincibubbly, 0);
+                case "textureconstant":
+                    return Connector.Write32(isTextureConstant, 0);
                 default:
-                    return true;
+                    return base.StopEffect(request);
 
             }
         }
